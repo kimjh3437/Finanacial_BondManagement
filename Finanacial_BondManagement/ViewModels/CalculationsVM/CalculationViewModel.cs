@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -25,12 +26,33 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
             constraints = new List<List<Variables>>();
             rHS = new List<Variables>();
             objectivesFunctions_Original = new List<Variables>();
+            Bases = new List<Variables>(); // requires initial 
+            zValue = 0.0; 
         }
 
         //______________________________________
         //
         // Content Methods 
         //______________________________________
+
+        //
+        // TODO 
+        // I NEED TO FILL OUT A WAY TO POPULATE COORDINATE ON THE SIMPLEX METHOD 
+        //
+        public async Task AddConstraints()
+        {
+
+        }
+        public async Task AddObjectiveFunctions()
+        {
+
+        }
+        public async Task AddRHS()
+        {
+
+        }
+
+
         public async Task SimplexMethod()
         {
             // first change the constraints to negative when its maximzation problem
@@ -41,6 +63,18 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                     item.Variable *= -1;
                 }
             }
+            await ValidationCheck();
+            await AddSlackArtificialVariables();
+            bool status = false;
+            while (!status)
+            {
+                status = await IterationPivot();
+            }
+
+            // 
+            // return result 
+            // TBD 
+            // 
 
         }
 
@@ -101,8 +135,14 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                         int count = 0;
                         foreach (var constraint in constraints)
                         {
-                            if (count == index)
+                            
+                            int ct = constraint.Count;
+                            Bases.Add(new Variables
                             {
+                                VarNum = ct
+                            });
+                            if (count == index)
+                            {                              
                                 constraint.Add(
                                     new Variables
                                     {
@@ -111,7 +151,8 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                                         IsArtificial = false,
                                         IsRegular = false,
                                         IsBasic = false,
-                                        Sign = 2
+                                        Sign = 2,
+                                        VarNum = ct
                                     });
                             }
                             else
@@ -124,7 +165,8 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                                         IsArtificial = false,
                                         IsRegular = false,
                                         IsBasic = false,
-                                        Sign = 2
+                                        Sign = 2,
+                                        VarNum = ct
                                     });
                             }
                             count++;
@@ -153,7 +195,8 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                                         IsArtificial = false,
                                         IsRegular = false,
                                         IsBasic = false,
-                                        Sign = 2
+                                        Sign = 2,
+                                        VarNum = constraint.Count
                                     });
                             }
                             else
@@ -166,7 +209,8 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                                         IsArtificial = false,
                                         IsRegular = false,
                                         IsBasic = false,
-                                        Sign = 2
+                                        Sign = 2,
+                                        VarNum = constraint.Count
                                     });
                             }
                             count++;
@@ -182,8 +226,56 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
             if (objectivesFunctions.Where(x => x.Variable < 0).Any())
             {
                 var item = objectivesFunctions.Where(x => x.Variable < 0).Max();
-                int index = objectivesFunctions.IndexOf(item);
+                int pivotPointColumnIndex = objectivesFunctions.IndexOf(item);
 
+                int count = 0;
+                double pivotPoint = -1;
+                int pivotPointRowIndex = 0; 
+
+                // compare and contrast - ultimately discover pivot point 
+                foreach(var rhs in rHS)
+                {     
+                    double ratio = rhs.Variable / (constraints[count][pivotPointColumnIndex].Variable);
+                    if (ratio > 0 && (ratio < pivotPoint || pivotPoint < 0))
+                    {
+                        pivotPointRowIndex = rHS.IndexOf(rhs);
+                        pivotPoint = ratio; 
+                    } 
+                    count++; 
+                }
+                Bases[pivotPointRowIndex] = rHS[pivotPointRowIndex];
+                
+
+
+                foreach(var constraint in constraints)
+                {
+                    int currentIndex = constraints.IndexOf(constraint);
+                    if (currentIndex != pivotPointRowIndex)
+                    {
+                        // implement pivots on constraints 
+                        double pivotRatio = constraint[pivotPointColumnIndex].Variable / constraints[pivotPointRowIndex][pivotPointColumnIndex].Variable *-1;
+                        foreach(var constraint_inner in constraint)
+                        {
+                            constraint_inner.Variable = constraint_inner.Variable + constraints[pivotPointRowIndex][currentIndex].Variable * pivotRatio;
+                        }
+
+                        // implement pivots on RHS 
+                        rHS[currentIndex].Variable = rHS[currentIndex].Variable + rHS[pivotPointRowIndex].Variable * pivotRatio;
+                    }
+                }
+
+                // implement pivots on obj the most bottom parts 
+                double pvtRatio = objectivesFunctions[pivotPointColumnIndex].Variable / constraints[pivotPointRowIndex][pivotPointColumnIndex].Variable * -1;
+                foreach (var obj in objectivesFunctions)
+                {
+                    int ind = objectivesFunctions.IndexOf(obj);
+                    obj.Variable = obj.Variable + constraints[pivotPointRowIndex][ind].Variable * pvtRatio;
+                }
+
+                // implement pivot on obj Z value 
+                zValue = zValue + rHS[pivotPointRowIndex].Variable * pvtRatio;
+
+                // end of pivot 
                 return true;
             }
             else
@@ -192,18 +284,44 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
             
         }
 
+        // list out the results in order from x_1 to x_n 
+        public async Task ProvideResults()
+        {
+            // provide optimal solutions 
+            int count = 1;
+            while (count < constraints[0].Count)
+            {
+                var item = Bases.Where(x => x.VarNum == count).FirstOrDefault();
+                if(item == null)
+                {
+                    Results.Add(new Variables
+                    {
+                        VarNum = count,
+                        Variable = 0.0
+                    });
+                }
+                else
+                {
+                    Results.Add(item);
+                }
+            }
+        }
+
 
         //______________________________________
         //
         // Binding  Models 
         //______________________________________
         public bool isMaximization { get; set; }
+        public double zValue { get; set; }
         public List<Variables> objectivesFunctions { get; set; } // objective function that is modified 
         public List<Variables> objectiveFunctions_DualSimpledx { get; set; } // this is used when the problem requires dual simplex method 
         public List<Variables> objectivesFunctions_Original { get; set; } // stores the original objective function 
 
         public List<List<Variables>> constraints { get; set; }
         public List<Variables> rHS { get; set; }
+        public List<Variables> Bases { get; set; } // bases // only varNum matters to "Bases" 
+        public ObservableCollection<Variables> Results { get; set; }
         
 
     }

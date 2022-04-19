@@ -10,6 +10,7 @@ namespace Finanacial_BondManagement.Models.Variable
     {
         // Main Contents 
         public double Variable { get; set; }
+        public int VarNum { get; set; }
         public int Sign { get; set; }
         // 0 = equality =
         // 1 = greater than  > 
