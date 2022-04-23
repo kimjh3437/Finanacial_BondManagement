@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Finanacial_BondManagement.Models.Interests;
 using Finanacial_BondManagement.Models.Variable;
 using Finanacial_BondManagement.ViewModels.BaseVM;
 
@@ -13,21 +14,43 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
     {
         public CalculationViewModel()
         {
-
         }
 
         //______________________________________
         //
         // Initialize Methods 
         //______________________________________
-        public async Task LoadData()
+        public void LoadData()
         {
-            objectivesFunctions = new List<Variables>();
-            constraints = new List<List<Variables>>();
-            rHS = new List<Variables>();
-            objectivesFunctions_Original = new List<Variables>();
+            objectivesFunctions = new ObservableCollection<Variables>();
+            constraints = new ObservableCollection<ObservableCollection<Variables>>
+            {
+                new ObservableCollection<Variables>(), 
+                new ObservableCollection<Variables>(),
+                new ObservableCollection<Variables>()
+            };
+            rHS = new ObservableCollection<Variables>
+            {
+                new Variables
+                {
+                    Variable = 100,
+                    VarNum = 1
+                },
+                new Variables
+                {
+                    Variable = -1,
+                    VarNum = 2
+                },
+                new Variables
+                {
+                    Variable = -1,
+                    VarNum = 3
+                }
+            };
+            objectivesFunctions_Original = new ObservableCollection<Variables>();
             Bases = new List<Variables>(); // requires initial 
-            zValue = 0.0; 
+            zValue = 0.0;
+            Bonds = new ObservableCollection<Bonds>();
         }
 
         //______________________________________
@@ -39,21 +62,70 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
         // TODO 
         // I NEED TO FILL OUT A WAY TO POPULATE COORDINATE ON THE SIMPLEX METHOD 
         //
-        public async Task AddConstraints()
+        public async Task<Bonds> AddBondType(double interestRate, double maturityRate )
         {
+            string bondID = Guid.NewGuid().ToString();
 
+            // create the bond 
+            Bonds bond = new Bonds
+            {
+                bondID = bondID,
+                InterestRate = interestRate,
+                MaturityRate = maturityRate,
+                Order = objectivesFunctions_Original.Count
+            };
+            Bonds.Add(bond);
+
+            int varNum = objectivesFunctions_Original.Count;
+            // add to objective function 
+            objectivesFunctions_Original.Add(
+                new Variables
+                {
+                    bondID = bondID,
+                    Variable = interestRate,
+                    VarNum = varNum
+                });
+
+            // change the first constraint 
+            constraints[0].Add(
+                new Variables
+                {
+                    bondID = bondID,
+                    Variable = 1.0,
+                    VarNum = varNum,
+                    Sign = 2 
+                });
+
+            //change the second constraint - add interest rates 
+            constraints[1].Add(
+                new Variables
+                {
+                    bondID = bondID,
+                    Variable = interestRate,
+                    VarNum = varNum,
+                    Sign = 2
+                });
+
+            //change the thrd constraint - add maturity rates 
+            constraints[1].Add(
+                new Variables
+                {
+                    bondID = bondID,
+                    Variable = interestRate,
+                    VarNum = varNum,
+                    Sign = 2
+                });
+
+            //update objective function string 
+            OnPropertyChanged("objective_function_str");
+            OnPropertyChanged("constraint_one_str");
+            OnPropertyChanged("constraint_two_str");
+            OnPropertyChanged("constraint_three_str");           
+            
+            return bond; 
         }
-        public async Task AddObjectiveFunctions()
-        {
 
-        }
-        public async Task AddRHS()
-        {
-
-        }
-
-
-        public async Task SimplexMethod()
+        public async Task InitiateSimplexMethod()
         {
             // first change the constraints to negative when its maximzation problem
             if (isMaximization)
@@ -314,14 +386,178 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
         //______________________________________
         public bool isMaximization { get; set; }
         public double zValue { get; set; }
-        public List<Variables> objectivesFunctions { get; set; } // objective function that is modified 
-        public List<Variables> objectiveFunctions_DualSimpledx { get; set; } // this is used when the problem requires dual simplex method 
-        public List<Variables> objectivesFunctions_Original { get; set; } // stores the original objective function 
+        public ObservableCollection<Variables> objectivesFunctions { get; set; } // objective function that is modified 
+        public ObservableCollection<Variables> objectiveFunctions_DualSimpledx { get; set; } // this is used when the problem requires dual simplex method 
+        public ObservableCollection<Variables> objectivesFunctions_Original { get; set; } // stores the original objective function 
 
-        public List<List<Variables>> constraints { get; set; }
-        public List<Variables> rHS { get; set; }
+
+        public ObservableCollection<Bonds> Bonds { get; set; }
+        public ObservableCollection<ObservableCollection<Variables>> constraints { get; set; } // maximum three constraints 
+        // first - sum should not exceed 100 
+        // second - average 
+        public ObservableCollection<Variables> rHS { get; set; }
         public List<Variables> Bases { get; set; } // bases // only varNum matters to "Bases" 
+
+        private string _obj_str;
+        private double _targetInterest, _targetMaturity; 
+        public string objective_function_str
+        {
+            get
+            {
+                String str = "";
+                foreach (var item in Bonds)
+                {
+                    int index = Bonds.IndexOf(item);
+                    if (index + 1 == Bonds.Count)
+                    {
+                        str += $"{item.InterestRate}x_{(index + 1)}";
+                    }
+                    else
+                    {
+                        str += $"{item.InterestRate}x_{(index + 1)} ";
+                    }
+                    
+                    
+                }
+                str = str.Replace(" ", "+");
+                return str; 
+            }
+            set
+            {
+                _obj_str = value;
+                OnPropertyChanged();
+            }
+        }
+        public string constraint_one_str
+        {
+            get
+            {
+                String str = "";
+                int index = 0; 
+                foreach(var item in constraints[0])
+                {      
+                    if(index + 1 == constraints[0].Count)
+                    {
+                        str += $"{item.Variable}x_{item.VarNum}";
+                    }
+                    else
+                    {
+                        str += $"{item.Variable}x_{item.VarNum} ";
+                    }    
+                    index++;           
+                }
+                str = str.Replace(" ", "+");
+                str += " <= 100";
+                return "";
+            }
+        }
+        public string constraint_two_str
+        {
+            get
+            {
+                String str = "";
+                int index = 0;
+                int toteCount = constraints[1].Count;
+                foreach (var item in constraints[1])
+                {
+                    if(index == 0)
+                    {
+                        if(index+1 == constraints[1].Count)
+                        {
+                            str += $"({item.Variable}/{toteCount}x_{item.VarNum}";
+                        }
+                        else
+                        {
+                            str += $"({item.Variable}/{toteCount}x_{item.VarNum} ";
+                        }
+                    }
+                    if(item.Variable < 0)
+                    {
+                        //when negative 
+                        str += $".{item.Variable}/{toteCount}x_{item.VarNum}";
+                    }
+                    else
+                    {
+                        // when positive 
+                        str += $" {item.Variable}/{toteCount}x_{item.VarNum}";
+                    }
+                    
+                    index++;
+                }
+                str = str.Replace(" ", "+");
+                str = str.Replace(".", "-");
+                str += $" <= {targetInterest}";
+                return str;
+            }
+        }
+        public string constraint_three_str
+        {
+            get
+            {
+                String str = "";
+                int index = 0;
+                int toteCount = constraints[2].Count;
+                foreach (var item in constraints[2])
+                {
+                    if (index == 0)
+                    {
+                        if (index + 1 == constraints[2].Count)
+                        {
+                            str += $"({item.Variable}/{toteCount}x_{item.VarNum}";
+                        }
+                        else
+                        {
+                            str += $"({item.Variable}/{toteCount}x_{item.VarNum} ";
+                        }
+                    }
+                    if (item.Variable < 0)
+                    {
+                        //when negative 
+                        str += $".{item.Variable}/{toteCount}x_{item.VarNum}";
+                    }
+                    else
+                    {
+                        // when positive 
+                        str += $" {item.Variable}/{toteCount}x_{item.VarNum}";
+                    }
+
+                    index++;
+                }
+                str = str.Replace(" ", "+");
+                str = str.Replace(".", "-");
+                str += $" <= {targetMaturity}";
+                return str;
+            }
+        }
+        public double targetInterest
+        {
+            get
+            {
+                return _targetInterest;
+            }
+            set
+            {
+                _targetInterest = value;
+                OnPropertyChanged();
+            }
+        }
+        public double targetMaturity
+        {
+            get
+            {
+                return _targetMaturity;
+            }
+            set
+            {
+                _targetMaturity = value;
+                OnPropertyChanged();
+            }
+        }
+
         public ObservableCollection<Variables> Results { get; set; }
+     
+
+
         
 
     }

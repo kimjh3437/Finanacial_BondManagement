@@ -3,49 +3,170 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="Finanacial_BondManagement.MainPage"
              BackgroundColor="{DynamicResource SecondaryColor}">
+    <Grid>
+        <Frame
+            Background="white
+            "
+            x:Name="Main">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!--Grid.Row = 0, Column = 0 : Average Target Rate-->
+                <StackLayout
+                    Grid.Column="0"
+                    Grid.Row="0">
+                    <Label
+                        TextColor="White"
+                        HorizontalOptions="CenterAndExpand"            
+                        Text="Enter Average Maturity Rate"/>
+                </StackLayout>
+                
+                <!--Grid.Row = 1, Column = 0 : Average Target Rate Entries-->
+                <StackLayout
+                    HorizontalOptions="Center"
+                    Grid.Row="1"
+                    Grid.Column="0">
+                    <StackLayout
+                        HorizontalOptions="CenterAndExpand">
+                        <Label
+                            HorizontalOptions="Center"
+                            VerticalOptions="Center"
+                            Text="Average Target Interest Rate"/>
+                        <Entry    
+                            HorizontalOptions="Center"
+                            WidthRequest="70"
+                            TextChanged="InterestRateEntry_TextChanged"
+                            x:Name="AverageRateEntry"
+                            TextColor="White"
+                            HeightRequest="50"/>
+                    </StackLayout>
+                </StackLayout>
 
-    <ScrollView>
-        <Grid RowSpacing="25" RowDefinitions="Auto,Auto,Auto,Auto,*"
-              Padding="{OnPlatform iOS='30,60,30,30', Default='30'}">
+                <!--Grid.Row = 0, Column = 1 : Label --> 
+                <StackLayout
+                    Grid.Column="1"
+                    Grid.Row="0">
+                    <Label
+                        TextColor="White"
+                        HorizontalOptions="CenterAndExpand"            
+                        Text="Enter New Bond Information"/>
+                </StackLayout>
 
-            <Label 
-                Text="Hello, World!"
-                Grid.Row="0"
-                SemanticProperties.HeadingLevel="Level1"
-                FontSize="32"
-                HorizontalOptions="Center" />
+                <!--Grid.Row = 1, Column = 1 : Entries -->
+                <StackLayout
+                    Grid.Column="1"
+                    Spacing="25"
+                    Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center">
+                    <StackLayout>
+                        <Label
+                            HorizontalOptions="CenterAndExpand"
+                            VerticalOptions="Center"
+                            Text="Interest Rate"/>
+                        <Entry 
+                            TextChanged="InterestRateEntry_TextChanged"
+                            x:Name="InterestRateEntry"
+                            TextColor="White"
+                            HeightRequest="50"/>
+                    </StackLayout>
 
-            <Label 
-                Text="Welcome to .NET Multi-platform App UI"
-                Grid.Row="1"
-                SemanticProperties.HeadingLevel="Level1"
-                SemanticProperties.Description="Welcome to dot net Multi platform App U I"
-                FontSize="18"
-                HorizontalOptions="Center" />
+                    <StackLayout>
+                        <Label
+                            HorizontalOptions="CenterAndExpand"
+                            VerticalOptions="Center"
+                            Text="Maturity Rate"/>
+                        <Entry 
+                            TextChanged="MaturityRateEntry_TextChanged"
+                            BackgroundColor="Black"
+                            x:Name="MaturityRateEntry"
+                            TextColor="White"
+                            HeightRequest="50"/>
+                    </StackLayout>
 
-            <Label 
-                Text="Current count: 0"
-                Grid.Row="2"
-                FontSize="18"
-                FontAttributes="Bold"
-                x:Name="CounterLabel"
-                HorizontalOptions="Center" />
+                    <StackLayout>
+                        <Label
+                            HorizontalOptions="CenterAndExpand"
+                            VerticalOptions="Center"
+                            Text="Average Target Rate"/>
+                        <Entry 
+                            TextChanged="TargetAverageInterestRateEntry_TextChanged"
+                            BackgroundColor="Black"
+                            x:Name="TargetAverageInterestRateEntry"
+                            TextColor="White"
+                            HeightRequest="50"/>
 
-            <Button 
-                Text="Click me"
-                FontAttributes="Bold"
-                Grid.Row="3"
-                SemanticProperties.Hint="Counts the number of times you click"
-                Clicked="OnCounterClicked"
-                HorizontalOptions="Center" />
+                    </StackLayout>
 
-            <Image Grid.Row="4"
-                Source="dotnet_bot.png"
-                SemanticProperties.Description="Cute dot net bot waving hi to you!"
-                WidthRequest="250"
-                HeightRequest="310"
-                HorizontalOptions="Center" />
 
-        </Grid>
-    </ScrollView>
+                </StackLayout>
+
+                <!--Grid.Row = 2, Column = 1 : Button to Add-->
+                <StackLayout
+                    Grid.Column="1"
+                    HorizontalOptions="Center"
+                    Margin="0,20,0,0"
+                    Grid.Row="2">
+                    <Button
+                        HorizontalOptions="CenterAndExpand"
+                        WidthRequest="200"
+                        x:Name="AddBond_Button"
+                        Clicked="AddBond_Button_Clicked"
+                        Text="Add Bond"/>
+                </StackLayout>
+
+                <!--Grid.Row = 0, Column = 1 : Label -->
+                <StackLayout
+                    Grid.Column="2"
+                    Grid.Row="0">
+                    <Label
+                        TextColor="White"
+                        HorizontalOptions="CenterAndExpand"            
+                        Text="Objective Function"/>
+                </StackLayout>
+
+                <!--Grid.Row = 1, Column = 2 : Objective Function-->
+                <StackLayout
+                    Orientation="Vertical"
+                    HorizontalOptions="Center"
+                    Grid.Row="1"
+                    Grid.RowSpan="2"
+                    Grid.Column="2">
+                    <Label
+                        TextColor="White"
+                        Text="{Binding objective_function_str}"/>
+
+                    <Label
+                        TextColor="White"
+                        Text="{Binding constraint_one_str}"/>
+
+                    <Label
+                        TextColor="White"
+                        Text="{Binding constraint_two_str}"/>
+
+                    <Label
+                        TextColor="White"
+                        Text="{Binding constraint_three_str}"/>
+                </StackLayout>
+
+  
+
+
+            </Grid>
+
+        </Frame>
+    </Grid>
+
+
 </ContentPage>
