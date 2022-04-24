@@ -15,17 +15,6 @@ public partial class MainPage : ContentPage
         this.BindingContext = _bindingContext; 
 	}
 
-    private void TargetAverageInterestRateEntry_TextChanged(object sender, TextChangedEventArgs e)
-    {
-        var model = sender as Entry;
-        int numericValue;
-        bool isNumber =  int.TryParse(model.Text, out numericValue);
-        if (isNumber)
-        {
-
-        }
-    }
-
     private void MaturityRateEntry_TextChanged(object sender, TextChangedEventArgs e)
     {
         var model = sender as Entry;
@@ -63,6 +52,38 @@ public partial class MainPage : ContentPage
             }
         }
         bool z = int.TryParse(InterestRateEntry.Text, out s);
+    }
+
+    private async void AverageMaturityRateEntry_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        var obj = sender as Entry;
+        int n; 
+        bool x = int.TryParse(obj.Text, out n);
+        if (x)
+        {
+            await _bindingContext.ChangeAVGrates(1, n);
+        }
+    }
+
+    private async void AverageInterestRateEntry_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        var obj = sender as Entry;
+        int n;
+        bool x = int.TryParse(obj.Text, out n);
+        if (x)
+        {
+            await _bindingContext.ChangeAVGrates(0, n);
+        }
+    }
+
+    private async void Calcuate_Button_Clicked(object sender, EventArgs e)
+    {
+        var result = await _bindingContext.CheckBeforeGo();
+        if (result)
+        {
+            await _bindingContext.InitiateSimplexMethod();
+        }
+
     }
 }
 

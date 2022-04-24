@@ -22,6 +22,8 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
         //______________________________________
         public void LoadData()
         {
+            isMaximization = true;
+            Results = new ObservableCollection<Variables>();
             objectivesFunctions = new ObservableCollection<Variables>();
             constraints = new ObservableCollection<ObservableCollection<Variables>>
             {
@@ -34,17 +36,20 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                 new Variables
                 {
                     Variable = 100,
-                    VarNum = 1
+                    VarNum = 1,
+                    Sign = -1
                 },
                 new Variables
                 {
                     Variable = -1,
-                    VarNum = 2
+                    VarNum = 2,
+                    Sign = -1
                 },
                 new Variables
                 {
                     Variable = -1,
-                    VarNum = 3
+                    VarNum = 3,
+                    Sign = -1
                 }
             };
             objectivesFunctions_Original = new ObservableCollection<Variables>();
@@ -58,10 +63,7 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
         // Content Methods 
         //______________________________________
 
-        //
-        // TODO 
-        // I NEED TO FILL OUT A WAY TO POPULATE COORDINATE ON THE SIMPLEX METHOD 
-        //
+
         public async Task<Bonds> AddBondType(double interestRate, double maturityRate )
         {
             string bondID = Guid.NewGuid().ToString();
@@ -76,8 +78,15 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
             };
             Bonds.Add(bond);
 
-            int varNum = objectivesFunctions_Original.Count;
+            int varNum = objectivesFunctions_Original.Count + 1;
             // add to objective function 
+            objectivesFunctions.Add(
+                new Variables
+                {
+                    bondID = bondID,
+                    Variable = interestRate,
+                    VarNum = varNum
+                });
             objectivesFunctions_Original.Add(
                 new Variables
                 {
@@ -101,17 +110,17 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                 new Variables
                 {
                     bondID = bondID,
-                    Variable = interestRate,
+                    Variable = interestRate/100,
                     VarNum = varNum,
                     Sign = 2
                 });
 
             //change the thrd constraint - add maturity rates 
-            constraints[1].Add(
+            constraints[2].Add(
                 new Variables
                 {
                     bondID = bondID,
-                    Variable = interestRate,
+                    Variable = maturityRate/100,
                     VarNum = varNum,
                     Sign = 2
                 });
@@ -122,9 +131,74 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
             OnPropertyChanged("constraint_two_str");
             OnPropertyChanged("constraint_three_str");           
             
-            return bond; 
+            return bond;
         }
+        public async Task ChangeAVGrates(int i, double val)
+        {
+            //change average interest rate 
+            if (i == 0)
+            {
+                targetInterest = val;
+                if (rHS[1] != null)
+                {
+                    rHS[1].Variable = val;
+                }
+                else
+                {
+                    rHS[1] = new Variables
+                    {
+                        Variable = val,
+                    };
+                }
 
+                OnPropertyChanged("constraint_two_str");
+            }
+            //change average maturity rate 
+            if (i == 1)
+            {
+                targetMaturity = val;
+                if (rHS[2] != null)
+                {
+                    rHS[2].Variable = val;
+                }
+                else
+                {
+                    rHS[2] = new Variables
+                    {
+                        Variable = val,
+                    };
+                }
+                OnPropertyChanged("constraint_three_str");
+            }
+
+        }
+        public async Task<bool> CheckBeforeGo()
+        {
+            if(Bases.Count == 0 || Bases == null)
+            {
+                int initCount = Bonds.Count;
+                Bases.Add(
+                    new Variables
+                    {
+                        VarNum = initCount + 1
+                    });
+                Bases.Add(
+                    new Variables
+                    {
+                        VarNum = initCount + 2
+                    });
+                Bases.Add(
+                    new Variables
+                    {
+                        VarNum = initCount + 3
+                    });
+            }
+            if (Bonds.Count > 0 && !rHS.Where(x => x.Variable < 0).Any())
+            {
+                return true;
+            }
+            else return false;
+        }
         public async Task InitiateSimplexMethod()
         {
             // first change the constraints to negative when its maximzation problem
@@ -135,12 +209,20 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                     item.Variable *= -1;
                 }
             }
-            await ValidationCheck();
-            await AddSlackArtificialVariables();
-            bool status = false;
-            while (!status)
+            try
             {
-                status = await IterationPivot();
+                await ValidationCheck();
+                await AddSlackArtificialVariables();
+                bool status = false;
+                while (!status)
+                {
+                    status = await IterationPivot();    
+                }
+                await ProvideResults();
+            }
+            catch(Exception ex)
+            {
+
             }
 
             // 
@@ -297,7 +379,9 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
         {
             if (objectivesFunctions.Where(x => x.Variable < 0).Any())
             {
-                var item = objectivesFunctions.Where(x => x.Variable < 0).Max();
+                var list = objectivesFunctions.Where(x => x.Variable < 0).ToList();
+                double min = list.Min(x => x.Variable);
+                var item = list.Where(x => x.Variable == min).FirstOrDefault();
                 int pivotPointColumnIndex = objectivesFunctions.IndexOf(item);
 
                 int count = 0;
@@ -348,10 +432,10 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                 zValue = zValue + rHS[pivotPointRowIndex].Variable * pvtRatio;
 
                 // end of pivot 
-                return true;
+                return false;
             }
             else
-                return false;
+                return true;
             // finds the most negative point 
             
         }
@@ -363,7 +447,7 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
             int count = 1;
             while (count < constraints[0].Count)
             {
-                var item = Bases.Where(x => x.VarNum == count).FirstOrDefault();
+                var item = Bases.Where(x => x.VarNum == count).FirstOrDefault();      
                 if(item == null)
                 {
                     Results.Add(new Variables
@@ -374,9 +458,14 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                 }
                 else
                 {
+                    int index = Bases.IndexOf(item);
+                    item.Variable = rHS[index].Variable;
                     Results.Add(item);
                 }
+                count++; 
             }
+
+            OnPropertyChanged("result_str");
         }
 
 
@@ -404,6 +493,10 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
         {
             get
             {
+                if (constraints[1].Count == 0)
+                {
+                    return "No Bonds Found";
+                }
                 String str = "";
                 foreach (var item in Bonds)
                 {
@@ -432,29 +525,37 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
         {
             get
             {
+                if (constraints[1].Count == 0)
+                {
+                    return "No Bonds Found";
+                }
                 String str = "";
                 int index = 0; 
                 foreach(var item in constraints[0])
                 {      
                     if(index + 1 == constraints[0].Count)
                     {
-                        str += $"{item.Variable}x_{item.VarNum}";
+                        str += $"x_{item.VarNum}";
                     }
                     else
                     {
-                        str += $"{item.Variable}x_{item.VarNum} ";
+                        str += $"x_{item.VarNum} ";
                     }    
                     index++;           
                 }
                 str = str.Replace(" ", "+");
                 str += " <= 100";
-                return "";
+                return str;
             }
         }
         public string constraint_two_str
         {
             get
             {
+                if (constraints[1].Count == 0)
+                {
+                    return "No Bonds Found";
+                }
                 String str = "";
                 int index = 0;
                 int toteCount = constraints[1].Count;
@@ -464,28 +565,31 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                     {
                         if(index+1 == constraints[1].Count)
                         {
-                            str += $"({item.Variable}/{toteCount}x_{item.VarNum}";
+                            str += $"{item.Variable}x_{item.VarNum}";
                         }
                         else
                         {
-                            str += $"({item.Variable}/{toteCount}x_{item.VarNum} ";
+                            str += $"{item.Variable}x_{item.VarNum}";
                         }
                     }
-                    if(item.Variable < 0)
+                    else if(item.Variable < 0)
                     {
                         //when negative 
-                        str += $".{item.Variable}/{toteCount}x_{item.VarNum}";
+                        str += $"@{item.Variable}x_{item.VarNum}";
                     }
                     else
                     {
                         // when positive 
-                        str += $" {item.Variable}/{toteCount}x_{item.VarNum}";
+                        str += $" {item.Variable}x_{item.VarNum}";
                     }
                     
                     index++;
                 }
                 str = str.Replace(" ", "+");
-                str = str.Replace(".", "-");
+                str = str.Replace("@", "-");
+                //String temp = "(";
+                //temp += str;
+                //temp += ")/100";
                 str += $" <= {targetInterest}";
                 return str;
             }
@@ -494,6 +598,10 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
         {
             get
             {
+                if (constraints[1].Count == 0)
+                {
+                    return "No Bonds Found";
+                }
                 String str = "";
                 int index = 0;
                 int toteCount = constraints[2].Count;
@@ -503,28 +611,31 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                     {
                         if (index + 1 == constraints[2].Count)
                         {
-                            str += $"({item.Variable}/{toteCount}x_{item.VarNum}";
+                            str += $"{item.Variable}x_{item.VarNum}";
                         }
                         else
                         {
-                            str += $"({item.Variable}/{toteCount}x_{item.VarNum} ";
+                            str += $"{item.Variable}x_{item.VarNum}";
                         }
                     }
-                    if (item.Variable < 0)
+                    else if (item.Variable < 0)
                     {
                         //when negative 
-                        str += $".{item.Variable}/{toteCount}x_{item.VarNum}";
+                        str += $"@{item.Variable}x_{item.VarNum}";
                     }
                     else
                     {
                         // when positive 
-                        str += $" {item.Variable}/{toteCount}x_{item.VarNum}";
+                        str += $" {item.Variable}x_{item.VarNum}";
                     }
 
                     index++;
                 }
                 str = str.Replace(" ", "+");
-                str = str.Replace(".", "-");
+                str = str.Replace("@", "-");
+                //String temp = "(";
+                //temp += str;
+                //temp += ")/100";
                 str += $" <= {targetMaturity}";
                 return str;
             }
@@ -551,6 +662,24 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
             {
                 _targetMaturity = value;
                 OnPropertyChanged();
+            }
+        }
+        public string result_str
+        {
+            get 
+            {
+                String str = "";
+                int index = 0; 
+                foreach(var item in Results)
+                {
+                    str += $"x_{index+1} = {item.Variable}";
+                    if (index + 1 != Results.Count)
+                    {
+                        str += ", ";
+                    }
+                    index++;
+                }
+                return str; 
             }
         }
 
