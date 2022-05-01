@@ -36,19 +36,25 @@ public partial class MainPage : ContentPage
 
         }
     }
+    private void RatingEntry_TextChanged(object sender, TextChangedEventArgs e)
+    {
+
+    }
 
     private async void AddBond_Button_Clicked(object sender, EventArgs e)
     {
         int n, t, s; 
         bool x = int.TryParse(InterestRateEntry.Text, out n);
         bool y = int.TryParse(MaturityRateEntry.Text, out t);
-        if(x && y)
+        bool q = int.TryParse(RatingEntry.Text, out s);
+        if (x && y && q)
         {
-            var result = await _bindingContext.AddBondType(n, t);
+            var result = await _bindingContext.AddBondType(n, t, s);
             if (result != null)
             {
                 InterestRateEntry.Text = string.Empty;
                 MaturityRateEntry.Text = string.Empty;
+                RatingEntry.Text = string.Empty; 
             }
         }
         bool z = int.TryParse(InterestRateEntry.Text, out s);
@@ -85,5 +91,7 @@ public partial class MainPage : ContentPage
         }
 
     }
+
+  
 }
 

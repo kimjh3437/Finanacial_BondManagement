@@ -41,7 +41,7 @@
                     Grid.Row="1"
                     Grid.Column="0">
 
-                    <!-- Average Interest RateEntry-->
+                    <!-- Average Maturity Rating RateEntry-->
                     <StackLayout
                         Orientation="Vertical"
                         Grid.Column="0"
@@ -58,7 +58,7 @@
                             HeightRequest="50"/>
                     </StackLayout>
 
-                    <!--Average Interest Rate Entries-->
+                    <!--Average Target Rate Entries-->
                     <StackLayout
                         HorizontalOptions="Center"
                         Grid.Row="1"
@@ -68,7 +68,7 @@
                             <Label
                                 HorizontalOptions="Center"
                                 VerticalOptions="Center"
-                                Text="Target Average Interest Rate"/>
+                                Text="Target Average Target Rate"/>
                             <Entry    
                                 HorizontalOptions="Center"
                                 WidthRequest="70"
@@ -126,6 +126,21 @@
                             TextColor="White"
                             HeightRequest="50"/>
                     </StackLayout>
+                    
+                    <!--New Bond Rating Entry-->
+                    <StackLayout>
+                        <Label
+                            HorizontalOptions="CenterAndExpand"
+                            VerticalOptions="Center"
+                            Text="Rating Rate"/>
+                        <Entry 
+                            TextChanged="RatingEntry_TextChanged"
+                            BackgroundColor="Black"
+                            x:Name="RatingEntry"
+                            TextColor="White"
+                            HeightRequest="50"/>
+                    </StackLayout>
+
 
                 </StackLayout>
 
@@ -201,9 +216,14 @@
                     HorizontalOptions="CenterAndExpand"
                     Margin="0,0,0,0"
                     Grid.Row="4">
-                    <Label
+                    <Frame
+                        BorderColor="#FAFFFFFF">
+                        <Label
+                            FontSize="20"
                         HorizontalOptions="CenterAndExpand"
                         Text="{Binding result_str}"/>
+                    </Frame>
+                   
                 </StackLayout>
 
 

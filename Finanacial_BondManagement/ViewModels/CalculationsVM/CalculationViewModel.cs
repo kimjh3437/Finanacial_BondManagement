@@ -64,7 +64,7 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
         //______________________________________
 
 
-        public async Task<Bonds> AddBondType(double interestRate, double maturityRate )
+        public async Task<Bonds> AddBondType(double interestRate, double maturityRate, double ratingRate)
         {
             string bondID = Guid.NewGuid().ToString();
 
@@ -110,7 +110,7 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                 new Variables
                 {
                     bondID = bondID,
-                    Variable = interestRate/100,
+                    Variable = ratingRate/100,
                     VarNum = varNum,
                     Sign = 2
                 });
@@ -293,6 +293,7 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                             int ct = constraint.Count;
                             Bases.Add(new Variables
                             {
+                                IsSlack = true,
                                 VarNum = ct
                             });
                             if (count == index)
@@ -315,7 +316,7 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                                     new Variables
                                     {
                                         Variable = 0,
-                                        IsSlack = false,
+                                        IsSlack = true,
                                         IsArtificial = false,
                                         IsRegular = false,
                                         IsBasic = false,
@@ -359,7 +360,7 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
                                     new Variables
                                     {
                                         Variable = 0.0,
-                                        IsSlack = false,
+                                        IsSlack = true,
                                         IsArtificial = false,
                                         IsRegular = false,
                                         IsBasic = false,
@@ -668,20 +669,31 @@ namespace Finanacial_BondManagement.ViewModels.CalculationsVM
         {
             get 
             {
+                int numBonds = Bonds.Count; 
                 String str = "";
-                int index = 0; 
+                int index = 0;
+                int count = 0;
                 foreach(var item in Results)
                 {
-                    str += $"x_{index+1} = {item.Variable}";
-                    if (index + 1 != Results.Count)
+
+                }
+                foreach(var item in Results)
+                {
+                    if(count < numBonds)
                     {
-                        str += ", ";
+                        str += $"Spend {item.Variable}% on Bond {index + 1}";
+                        if (index + 1 != Results.Count)
+                        {
+                            str += ", ";
+                        }
+                        count++;
                     }
                     index++;
                 }
                 return str; 
             }
         }
+
 
         public ObservableCollection<Variables> Results { get; set; }
      
